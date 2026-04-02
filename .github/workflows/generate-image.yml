@@ -59,8 +59,12 @@ jobs:
         run: |
           curl -fsS -o images/generated_image.png "${{ steps.extract.outputs.image_url }}"
       - name: Generate index.html
+        env:
+          COMMIT_MESSAGE: ${{ steps.commit.outputs.message }}
         run: |
-          echo "<html><body><h1>Generated Image</h1><img src='generated_image.png' alt='Generated Image'></body></html>" > images/index.html
+          TITLE=$(printf '%s' "$COMMIT_MESSAGE" | head -n 1)
+          TITLE_ESCAPED=$(printf '%s' "$TITLE" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g; s/'"'"'/\&#39;/g')
+          echo "<html><body><h1>${TITLE_ESCAPED}</h1><img src='generated_image.png' alt='${TITLE_ESCAPED}'></body></html>" > images/index.html
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:

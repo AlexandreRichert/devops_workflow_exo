@@ -19,22 +19,24 @@ jobs:
       - name: Get last commit message
         id: commit
         run: |
-          MESSAGE=$(git log -1 --pretty=%B)
-          echo "message=$MESSAGE" >> $GITHUB_OUTPUT
+          {
+            echo 'message<<EOF'
+            git log -1 --pretty=%B
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
 
       - name: Create images folder
         run: mkdir -p images
 
       - name: Call DynaPictures API
+        env:
+          COMMIT_MESSAGE: ${{ steps.commit.outputs.message }}
         run: |
-          RESPONSE=$(curl -s -X POST "https://api.dynapictures.com/designs/8707667c79" \
+          PAYLOAD=$(jq -n --arg text "$COMMIT_MESSAGE" '{input: {text: $text}}')
+          RESPONSE=$(curl -fsS -X POST "https://api.dynapictures.com/designs/8707667c79" \
           -H "Authorization: Bearer ${{ secrets.DYNAPICTURES_API_KEY }}" \
           -H "Content-Type: application/json" \
-          -d "{
-            \"input\": {
-              \"text\": \"${{ steps.commit.outputs.message }}\"
-            }
-          }")
+          -d "$PAYLOAD")
           echo "$RESPONSE" > response.json
 
       - name: Debug API response
@@ -43,11 +45,16 @@ jobs:
       - name: Extract image URL
         id: extract
         run: |
-          IMAGE_URL=$(jq -r '.output.image_url' response.json)
+          IMAGE_URL=$(jq -er '.output.image_url // .output.imageUrl // .image_url // .imageUrl' response.json)
+          if [ -z "$IMAGE_URL" ] || [ "$IMAGE_URL" = "null" ]; then
+            echo "DynaPictures API did not return an image URL"
+            cat response.json
+            exit 1
+          fi
           echo "image_url=$IMAGE_URL" >> $GITHUB_OUTPUT
       - name: Download generated image
         run: |
-          curl -s -o images/generated_image.png "${{ steps.extract.outputs.image_url }}"
+          curl -fsS -o images/generated_image.png "${{ steps.extract.outputs.image_url }}"
       - name: Generate index.html
         run: |
           echo "<html><body><h1>Generated Image</h1><img src='generated_image.png' alt='Generated Image'></body></html>" > images/index.html
@@ -55,4 +62,5 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .
+          publish_dir: ./images
+          keep_files: true

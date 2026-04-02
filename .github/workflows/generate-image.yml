@@ -39,3 +39,20 @@ jobs:
 
       - name: Debug API response
         run: cat response.json
+
+      - name: Extract image URL
+        id: extract
+        run: |
+          IMAGE_URL=$(jq -r '.output.image_url' response.json)
+          echo "image_url=$IMAGE_URL" >> $GITHUB_OUTPUT
+      - name: Download generated image
+        run: |
+          curl -s -o images/generated_image.png "${{ steps.extract.outputs.image_url }}"
+      - name: Generate index.html
+        run: |
+          echo "<html><body><h1>Generated Image</h1><img src='generated_image.png' alt='Generated Image'></body></html>" > images/index.html
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .

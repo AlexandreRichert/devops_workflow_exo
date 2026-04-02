@@ -5,6 +5,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: write
+
 jobs:
   generate-and-deploy:
     runs-on: ubuntu-latest
@@ -33,7 +36,7 @@ jobs:
           COMMIT_MESSAGE: ${{ steps.commit.outputs.message }}
         run: |
           PAYLOAD=$(jq -n --arg text "$COMMIT_MESSAGE" '{input: {text: $text}}')
-          RESPONSE=$(curl -fsS -X POST "https://api.dynapictures.com/designs/8707667c79" \
+          RESPONSE=$(curl -fsS -X POST "https://api.dynapictures.com/designs/589a2ee03d" \
           -H "Authorization: Bearer ${{ secrets.DYNAPICTURES_API_KEY }}" \
           -H "Content-Type: application/json" \
           -d "$PAYLOAD")

@@ -1,0 +1,41 @@
+name: Generate Image and Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  generate-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Get last commit message
+        id: commit
+        run: |
+          MESSAGE=$(git log -1 --pretty=%B)
+          echo "message=$MESSAGE" >> $GITHUB_OUTPUT
+
+      - name: Create images folder
+        run: mkdir -p images
+
+      - name: Call DynaPictures API
+        run: |
+          RESPONSE=$(curl -s -X POST "https://api.dynapictures.com/designs/8707667c79" \
+          -H "Authorization: Bearer ${{ secrets.DYNAPICTURES_API_KEY }}" \
+          -H "Content-Type: application/json" \
+          -d "{
+            \"input\": {
+              \"text\": \"${{ steps.commit.outputs.message }}\"
+            }
+          }")
+          echo "$RESPONSE" > response.json
+
+      - name: Debug API response
+        run: cat response.json

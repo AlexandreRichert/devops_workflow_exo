@@ -34,12 +34,20 @@ jobs:
       - name: Create images folder
         run: mkdir -p images
 
+      # ✅ NOUVEAU : nom de fichier dynamique basé sur le SHA du commit
+      - name: Generate dynamic image name
+        id: naming
+        run: |
+          IMAGE_NAME="image_${{ github.sha }}.png"
+          echo "image_name=$IMAGE_NAME" >> $GITHUB_OUTPUT
+          echo "Nom du fichier : $IMAGE_NAME"
+
       - name: Call DynaPictures API
         env:
           COMMIT_MESSAGE: ${{ steps.commit.outputs.message }}
         run: |
           PAYLOAD=$(jq -n --arg text "$COMMIT_MESSAGE" '{input: {text: $text}}')
-          RESPONSE=$(curl -fsS -X POST "https://api.dynapictures.com/designs/589a2ee03d" \
+          RESPONSE=$(curl -fsS -X POST "https://api.dynapictures.com/designs/b92aa8360a" \
           -H "Authorization: Bearer ${{ secrets.DYNAPICTURES_API_KEY }}" \
           -H "Content-Type: application/json" \
           -d "$PAYLOAD")
@@ -58,28 +66,44 @@ jobs:
             exit 1
           fi
           echo "image_url=$IMAGE_URL" >> $GITHUB_OUTPUT
+
+      # ✅ MODIFIÉ : utilise le nom dynamique
       - name: Download generated image
         run: |
-          curl -fsS -o images/generated_image.png "${{ steps.extract.outputs.image_url }}"
+          IMAGE_NAME="${{ steps.naming.outputs.image_name }}"
+          curl -fsS -o "images/$IMAGE_NAME" "${{ steps.extract.outputs.image_url }}"
+
       - name: Generate index.html
         env:
           COMMIT_MESSAGE: ${{ steps.commit.outputs.message }}
         run: |
+          IMAGE_NAME="${{ steps.naming.outputs.image_name }}"
           TITLE=$(printf '%s' "$COMMIT_MESSAGE" | head -n 1)
           TITLE_ESCAPED=$(printf '%s' "$TITLE" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g; s/'"'"'/\&#39;/g')
-          echo "<html><body><h1>${TITLE_ESCAPED}</h1><img src='generated_image.png' alt='${TITLE_ESCAPED}'></body></html>" > images/index.html
+          echo "<html><body><h1>${TITLE_ESCAPED}</h1><img src='${IMAGE_NAME}' alt='${TITLE_ESCAPED}'></body></html>" > images/index.html
+
+      # ✅ MODIFIÉ : commit avec le nom dynamique
       - name: Commit images folder to main
         run: |
-          git add images/index.html images/generated_image.png
+          IMAGE_NAME="${{ steps.naming.outputs.image_name }}"
+          git add "images/$IMAGE_NAME" images/index.html
           if git diff --cached --quiet; then
             echo "No changes to commit in images/"
             exit 0
           fi
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "chore: update generated assets [skip ci]"
           git push origin HEAD:main
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./images
           keep_files: true
+
+      # ✅ NOUVEAU : upload de l'artefact pour l'exercice 03
+      - name: Upload artefact image
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-generee
+          path: images/${{ steps.naming.outputs.image_name }}

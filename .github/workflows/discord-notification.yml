@@ -2,7 +2,7 @@ name: 🔔 Notification Discord
 
 on:
   workflow_run:
-    workflows: ['Generate Image and Deploy'] # ← nom exact du workflow ci-dessus
+    workflows: ['Generate Image and Deploy']
     types:
       - completed
 
@@ -16,7 +16,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 1
 
       - name: Récupérer le message du commit

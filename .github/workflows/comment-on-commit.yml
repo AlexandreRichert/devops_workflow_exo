@@ -1,31 +1,42 @@
 name: Comment On Commit With Generated Image
 
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows: ['Generate Image and Deploy']
+    types:
+      - completed
 
 permissions:
   contents: write
 
 jobs:
   comment-on-commit:
-    if: github.actor != 'github-actions[bot]'
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 1
+
+      - name: Get commit message
+        id: commit
+        run: |
+          {
+            echo 'message<<EOF'
+            git log -1 --pretty=%B
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
 
       - name: Download generated image artifact
-        uses: dawidd6/action-download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          workflow: generate-image.yml
-          branch: main
-          event: push
           name: image-generee
           path: ./artifacts
-          if_no_artifact_found: fail
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
 
       - name: Get generated image filename
         id: image
@@ -48,8 +59,8 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const commitSha = context.sha;
-            const commitMessage = context.payload.head_commit?.message || "Message indisponible";
+            const commitSha = "${{ github.event.workflow_run.head_sha }}";
+            const commitMessage = `${{ steps.commit.outputs.message }}`;
             const imageUrl = "${{ steps.image_url.outputs.image_url }}";
 
             await github.rest.repos.createCommitComment({

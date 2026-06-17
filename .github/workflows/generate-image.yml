@@ -34,7 +34,6 @@ jobs:
       - name: Create images folder
         run: mkdir -p images
 
-      # ✅ NOUVEAU : nom de fichier dynamique basé sur le SHA du commit
       - name: Generate dynamic image name
         id: naming
         run: |
@@ -46,8 +45,8 @@ jobs:
         env:
           COMMIT_MESSAGE: ${{ steps.commit.outputs.message }}
         run: |
-          PAYLOAD=$(jq -n --arg text "$COMMIT_MESSAGE" '{input: {text: $text}}')
-          RESPONSE=$(curl -fsS -X POST "https://api.dynapictures.com/designs/b92aa8360a" \
+          PAYLOAD=$(jq -n --arg text1 "$COMMIT_MESSAGE" '{input: {text1: $text1}}')
+          RESPONSE=$(curl -fsS -X POST "https://api.dynapictures.com/designs/d1b880ee29" \
           -H "Authorization: Bearer ${{ secrets.DYNAPICTURES_API_KEY }}" \
           -H "Content-Type: application/json" \
           -d "$PAYLOAD")
@@ -67,7 +66,6 @@ jobs:
           fi
           echo "image_url=$IMAGE_URL" >> $GITHUB_OUTPUT
 
-      # ✅ MODIFIÉ : utilise le nom dynamique
       - name: Download generated image
         run: |
           IMAGE_NAME="${{ steps.naming.outputs.image_name }}"
@@ -82,7 +80,6 @@ jobs:
           TITLE_ESCAPED=$(printf '%s' "$TITLE" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g; s/'"'"'/\&#39;/g')
           echo "<html><body><h1>${TITLE_ESCAPED}</h1><img src='${IMAGE_NAME}' alt='${TITLE_ESCAPED}'></body></html>" > images/index.html
 
-      # ✅ MODIFIÉ : commit avec le nom dynamique
       - name: Commit images folder to main
         run: |
           IMAGE_NAME="${{ steps.naming.outputs.image_name }}"
@@ -101,7 +98,6 @@ jobs:
           publish_dir: ./images
           keep_files: true
 
-      # ✅ NOUVEAU : upload de l'artefact pour l'exercice 03
       - name: Upload artefact image
         uses: actions/upload-artifact@v4
         with:

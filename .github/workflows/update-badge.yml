@@ -1,0 +1,48 @@
+name: 🏷️ Update Dynamic Badge
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  update-badge:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Count total commits
+        id: stats
+        run: |
+          TOTAL_COMMITS=$(git rev-list --count HEAD)
+          echo "total_commits=$TOTAL_COMMITS" >> $GITHUB_OUTPUT
+
+      - name: Create badges directory
+        run: mkdir -p .github/badges
+
+      - name: Generate badge JSON (Shields.io endpoint format)
+        run: |
+          cat <<EOF > .github/badges/commits-badge.json
+          {
+            "schemaVersion": 1,
+            "label": "commits",
+            "message": "${{ steps.stats.outputs.total_commits }}",
+            "color": "blue"
+          }
+          EOF
+
+      - name: Commit badge file
+        run: |
+          git add .github/badges/commits-badge.json
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "chore: update commits badge [skip ci]"
+          git push origin HEAD:main

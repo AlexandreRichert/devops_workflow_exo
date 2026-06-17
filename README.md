@@ -6,3 +6,4 @@
 ![Generate Image](https://github.com/AlexandreRichert/devops_workflow_exo/actions/workflows/generate-image.yml/badge.svg)
 ![Notification Discord](https://github.com/AlexandreRichert/devops_workflow_exo/actions/workflows/discord-notification.yml/badge.svg)
 ![Comment On Commit](https://github.com/AlexandreRichert/devops_workflow_exo/actions/workflows/comment-on-commit.yml/badge.svg)
+![Nombre de commits](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/AlexandreRichert/devops_workflow_exo/main/.github/badges/commits-badge.json)
